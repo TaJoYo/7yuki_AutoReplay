@@ -1,0 +1,42 @@
+# .github/workflows/main.yml
+name: 7yuki Auto Reply
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # UTC 01:00 == 北京时间 09:00
+  workflow_dispatch:       # 允许手动运行
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Shanghai    # 日志时间用北京时间
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: npm install puppeteer axios
+
+      - name: Run script
+        env:
+          YUKI_COOKIE: ${{ secrets.YUKI_COOKIE }}
+          YUKI_USERNAME: ${{ secrets.YUKI_USERNAME }}
+          YUKI_PASSWORD: ${{ secrets.YUKI_PASSWORD }}
+          BAIDU_AK: ${{ secrets.BAIDU_AK }}
+          BAIDU_SK: ${{ secrets.BAIDU_SK }}
+          HEADFUL: 'false'              # CI 用无头模式
+        run: node index.js
+
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screens
+          path: |
+            *.png
