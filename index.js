@@ -6,7 +6,7 @@ const { text } = require('stream/consumers');
 
 const AK = process.env.BAIDU_AK;
 const SK = process.env.BAIDU_SK;
-const COOKIE = process.env.YUKI_COOKIE || '';
+// const COOKIE = process.env.YUKI_COOKIE || '';
 const USERNAME = process.env.YUKI_USERNAME || '';
 const PASSWORD = process.env.YUKI_PASSWORD || '';
 const HEADFUL = String(process.env.HEADFUL).toLowerCase() === 'true';
@@ -61,28 +61,28 @@ async function recognizeCaptchaBaidu(imgData, isBase64 = false) {
     }
 }
 
-async function loginWithCookie(page) {
-    if (!COOKIE) return false;
-    const pairs = COOKIE.split(';').map(s => s.trim()).filter(Boolean);
-    const cookies = pairs.map(p => {
-        const eq = p.indexOf('=');
-        const name = eq >= 0 ? p.slice(0, eq) : p;
-        const value = eq >= 0 ? p.slice(eq + 1) : '';
-        return { name, value, domain: '7yuki.com', path: '/' };
-    });
-    await page.setCookie(...cookies);
+// async function loginWithCookie(page) {
+//     if (!COOKIE) return false;
+//     const pairs = COOKIE.split(';').map(s => s.trim()).filter(Boolean);
+//     const cookies = pairs.map(p => {
+//         const eq = p.indexOf('=');
+//         const name = eq >= 0 ? p.slice(0, eq) : p;
+//         const value = eq >= 0 ? p.slice(eq + 1) : '';
+//         return { name, value, domain: '7yuki.com', path: '/' };
+//     });
+//     await page.setCookie(...cookies);
 
-    await page.goto('https://7yuki.com/', { waitUntil: 'networkidle2' });
-    await sleep(2000);
-    const logged = await page.$('#myitem') || await page.$('#myprompt');
-    if (logged) {
-        console.log('使用 Cookie 登录成功');
-        return true;
-    } else {
-        console.log('Cookie 可能失效，尝试账号密码登录');
-        return false;
-    }
-}
+//     await page.goto('https://7yuki.com/', { waitUntil: 'networkidle2' });
+//     await sleep(2000);
+//     const logged = await page.$('#myitem') || await page.$('#myprompt');
+//     if (logged) {
+//         console.log('使用 Cookie 登录成功');
+//         return true;
+//     } else {
+//         console.log('Cookie 可能失效，尝试账号密码登录');
+//         return false;
+//     }
+//}
 
 async function loginWithPassword(page) {
     if (!USERNAME || !PASSWORD) return false;
@@ -225,8 +225,8 @@ async function postOnce(page) {
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0');
 
-    let logged = await loginWithCookie(page);
-    if (!logged) logged = await loginWithPassword(page);
+    //let logged = await loginWithCookie(page);
+    let logged = await loginWithPassword(page);
     if (!logged) {
         console.log('登录失败，退出');
         await browser.close();
