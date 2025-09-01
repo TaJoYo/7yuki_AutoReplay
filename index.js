@@ -31,7 +31,7 @@ function getAccessToken() {
     }
     return new Promise((resolve, reject) => {
         axios(options)
-            .then(res => {
+            。then(res => {
                 resolve(res.data.access_token)
             })
             .catch(error => {
@@ -177,7 +177,7 @@ async function postOnce(page) {
     await page.waitForSelector('[name="seccodeverify"]', { timeout: 20000 });
     await fillPost(page);
 
-    for (let attempt = 0; attempt < 3; attempt++) {
+
         const code = await trySolveCaptcha(page);
         if (!code) {
             console.log('验证码识别失败，本次放弃');
@@ -202,11 +202,9 @@ async function postOnce(page) {
                 document.querySelector('#fwin_reply .flbc')?.click();
             });
             await sleep(2000);
-            continue;
+            return false
         }
         return true;
-    }
-    return false;
 }
 
 
@@ -258,4 +256,5 @@ async function postOnce(page) {
     }
 
     // await browser.close();
+
 })();
