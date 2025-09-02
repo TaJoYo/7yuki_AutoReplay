@@ -31,7 +31,7 @@ function getAccessToken() {
     }
     return new Promise((resolve, reject) => {
         axios(options)
-            。then(res => {
+            .then(res => {
                 resolve(res.data.access_token)
             })
             .catch(error => {
@@ -258,3 +258,4 @@ async function postOnce(page) {
     // await browser.close();
 
 })();
+
