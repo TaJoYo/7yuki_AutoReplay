@@ -243,7 +243,10 @@ async function postOnce(page) {
             if (ok) {
                 success++;
                 console.log(`第 ${success} 次回复成功`);
-                if (success >= 5) break;
+                if (success >= 5){
+                    console.log('今日回复已完成');
+                    break;
+                }
                 await sleep(jitter(60_000, 8000));
             } else {
                 console.log('本次失败，5 秒后重试');
@@ -255,7 +258,8 @@ async function postOnce(page) {
         }
     }
 
-    // await browser.close();
+    await browser.close();
 
 })();
+
 
