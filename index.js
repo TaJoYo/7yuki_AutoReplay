@@ -6,15 +6,56 @@ const { text } = require('stream/consumers');
 
 const AK = process.env.BAIDU_AK;
 const SK = process.env.BAIDU_SK;
-// const COOKIE = process.env.YUKI_COOKIE || '';
-const USERNAME = process.env.YUKI_USERNAME || '';
-const PASSWORD = process.env.YUKI_PASSWORD || '';
 const HEADFUL = String(process.env.HEADFUL).toLowerCase() === 'true';
 const THREAD_URLS = [
     "https://7yuki.com/thread-7434-1-1.html",
     "https://7yuki.com/thread-623-1-1.html",
     "https://7yuki.com/thread-597-1-1.html"
 ];
+
+/**
+ * 解析多个账户信息
+ */
+function parseAccounts() {
+    const accounts = [];
+    
+    // 支持两种方式定义多账户：
+    // 1. 通过环境变量 ACCOUNTS_JSON 定义（JSON 格式）
+    // 2. 通过多个 *_USERNAME/*_PASSWORD 对定义
+    
+    if (process.env.ACCOUNTS_JSON) {
+        try {
+            return JSON.parse(process.env.ACCOUNTS_JSON);
+        } catch (e) {
+            console.error('ACCOUNTS_JSON 解析失败:', e.message);
+        }
+    }
+    
+    // 如果没有提供 ACCOUNTS_JSON，则查找形如 USER1_USERNAME/USER1_PASSWORD 的环境变量对
+    const envKeys = Object.keys(process.env);
+    const userPrefixes = [...new Set(envKeys
+        .filter(key => key.endsWith('_USERNAME'))
+        .map(key => key.replace('_USERNAME', '')))];
+    
+    for (const prefix of userPrefixes) {
+        const username = process.env[`${prefix}_USERNAME`];
+        const password = process.env[`${prefix}_PASSWORD`];
+        
+        if (username && password) {
+            accounts.push({ username, password });
+        }
+    }
+    
+    // 如果没有找到前缀形式的账户，则使用默认的 YUKI_USERNAME/YUKI_PASSWORD
+    if (accounts.length === 0 && process.env.YUKI_USERNAME && process.env.YUKI_PASSWORD) {
+        accounts.push({
+            username: process.env.YUKI_USERNAME,
+            password: process.env.YUKI_PASSWORD
+        });
+    }
+    
+    return accounts;
+}
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -84,12 +125,12 @@ async function recognizeCaptchaBaidu(imgData, isBase64 = false) {
 //     }
 //}
 
-async function loginWithPassword(page) {
-    if (!USERNAME || !PASSWORD) return false;
+async function loginWithPassword(page, username, password) {
+    if (!username || !password) return false;
     await page.goto('https://7yuki.com/member.php?mod=logging&action=login', { waitUntil: 'networkidle2' });
     await page.waitForSelector('[name="username"]', { timeout: 15000 });
-    await page.type('[name="username"]:not(#lostpw_username)', USERNAME, { delay: 20 });
-    await page.type('[name="password"]', PASSWORD, { delay: 20 });
+    await page.type('[name="username"]:not(#lostpw_username)', username, { delay: 20 });
+    await page.type('[name="password"]', password, { delay: 20 });
     await page.click('[name="cookietime"]', { delay: 20 });
     await Promise.all([
         page.click('button[name="loginsubmit"]'),
@@ -97,10 +138,10 @@ async function loginWithPassword(page) {
     ]);
     const logged = await page.$('#myitem') || await page.$('#myprompt');
     if (logged) {
-        console.log('使用账号密码登录成功');
+        console.log(`使用账号 ${username} 登录成功`);
         return true;
     }
-    console.log('账号密码登录失败');
+    console.log(`账号 ${username} 登录失败`);
     return false;
 }
 
@@ -208,7 +249,12 @@ async function postOnce(page) {
 }
 
 
-(async () => {
+/**
+ * 处理单个账户的任务
+ */
+async function handleAccount(account) {
+    console.log(`开始处理账户: ${account.username}`);
+    
     const browser = await puppeteer.launch({
         headless: HEADFUL ? false : 'new',
         args: [
@@ -223,12 +269,11 @@ async function postOnce(page) {
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0');
 
-    //let logged = await loginWithCookie(page);
-    let logged = await loginWithPassword(page);
+    let logged = await loginWithPassword(page, account.username, account.password);
     if (!logged) {
-        console.log('登录失败，退出');
+        console.log(`账户 ${account.username} 登录失败，退出`);
         await browser.close();
-        process.exit(1);
+        return false;
     }
 
     let success = 0;
@@ -242,24 +287,53 @@ async function postOnce(page) {
 
             if (ok) {
                 success++;
-                console.log(`第 ${success} 次回复成功`);
+                console.log(`账户 ${account.username} 第 ${success} 次回复成功`);
                 if (success >= 5){
-                    console.log('今日回复已完成');
+                    console.log(`账户 ${account.username} 今日回复已完成`);
                     break;
                 }
                 await sleep(jitter(60_000, 8000));
             } else {
-                console.log('本次失败，5 秒后重试');
+                console.log(`账户 ${account.username} 本次失败，5 秒后重试`);
                 await sleep(5000);
             }
         } catch (e) {
-            console.log('异常：', e.message);
+            console.log(`账户 ${account.username} 异常：`, e.message);
             await sleep(5000);
         }
     }
 
     await browser.close();
+    return true;
+}
 
+(async () => {
+    const accounts = parseAccounts();
+    
+    if (accounts.length === 0) {
+        console.log('未找到任何账户信息，请检查环境变量配置');
+        process.exit(1);
+    }
+    
+    console.log(`共找到 ${accounts.length} 个账户`);
+    
+    // 依次处理每个账户
+    for (const [index, account] of accounts.entries()) {
+        try {
+            console.log(`开始处理第 ${index + 1} 个账户`);
+            await handleAccount(account);
+            
+            // 账户之间添加间隔，避免过于频繁
+            if (index < accounts.length - 1) {
+                console.log('等待 30 秒后处理下一个账户');
+                await sleep(30000);
+            }
+        } catch (e) {
+            console.error(`处理账户 ${account.username} 时发生错误:`, e.message);
+        }
+    }
+    
+    console.log('所有账户处理完毕');
 })();
 
 
