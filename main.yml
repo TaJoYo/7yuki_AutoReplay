@@ -25,11 +25,23 @@ jobs:
 
       - name: Run script
         env:
-          YUKI_COOKIE: ${{ secrets.YUKI_COOKIE }}
-          YUKI_USERNAME: ${{ secrets.YUKI_USERNAME }}
-          YUKI_PASSWORD: ${{ secrets.YUKI_PASSWORD }}
+          # 百度OCR API密钥
           BAIDU_AK: ${{ secrets.BAIDU_AK }}
           BAIDU_SK: ${{ secrets.BAIDU_SK }}
+          
+          # 多账户支持 - 方式1: 使用 ACCOUNTS_JSON (推荐)
+          ACCOUNTS_JSON: ${{ secrets.ACCOUNTS_JSON }}
+          
+          # 多账户支持 - 方式2: 使用前缀命名
+          # USER1_USERNAME: ${{ secrets.USER1_USERNAME }}
+          # USER1_PASSWORD: ${{ secrets.USER1_PASSWORD }}
+          # USER2_USERNAME: ${{ secrets.USER2_USERNAME }}
+          # USER2_PASSWORD: ${{ secrets.USER2_PASSWORD }}
+          
+          # 单账户兼容模式
+          # YUKI_USERNAME: ${{ secrets.YUKI_USERNAME }}
+          # YUKI_PASSWORD: ${{ secrets.YUKI_PASSWORD }}
+          
           HEADFUL: 'false'              # CI 用无头模式
         run: node index.js
 
