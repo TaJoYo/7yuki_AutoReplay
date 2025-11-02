@@ -10,3 +10,28 @@
 -------------------------------------------------------------------------------------------------------
 BAIDU_AK,BAIDU_SK需要申请百度文字识别api后在百度智能云控制台获取，具体申请步骤请上网搜索
 ![获取密钥](https://github.com/user-attachments/assets/f0753b7c-1470-42f2-b4b7-8b53d3d390c7)
+
+## 多账户支持
+本项目支持配置多个账户，有两种配置方式：
+
+### 方式一：使用 ACCOUNTS_JSON (推荐)
+创建一个名为 ACCOUNTS_JSON 的仓库密码，内容为 JSON 格式：
+```json
+[
+  {
+    "username": "用户名1",
+    "password": "密码1"
+  },
+  {
+    "username": "用户名2",
+    "password": "密码2"
+  }
+]
+```
+
+### 方式二：使用前缀命名
+创建多个以不同前缀命名的仓库密码对：
+- USER1_USERNAME 和 USER1_PASSWORD
+- USER2_USERNAME 和 USER2_PASSWORD
+
+注意：如果配置了 ACCOUNTS_JSON，则其他方式的配置会被忽略。
