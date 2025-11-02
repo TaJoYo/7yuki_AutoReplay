@@ -33,6 +33,7 @@ BAIDU_AK,BAIDU_SK需要申请百度文字识别api后在百度智能云控制台
 创建多个以不同前缀命名的仓库密码对：
 - USER1_USERNAME 和 USER1_PASSWORD
 - USER2_USERNAME 和 USER2_PASSWORD
+
 该方式需要在yml中取消对应代码的注释
 
 注意：如果配置了 ACCOUNTS_JSON，则其他方式的配置会被忽略。
