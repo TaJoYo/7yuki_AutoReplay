@@ -261,7 +261,7 @@ async function handleAccount(account) {
             '--no-sandbox',
             '--disable-setuid-sandbox',
             '--window-size=1280,800',
-            '--user-data-dir=./puppeteer_profile',
+            '--user-data-dir=./puppeteer_profile' + account.username,
         ]
     });
 
@@ -335,5 +335,6 @@ async function handleAccount(account) {
     
     console.log('所有账户处理完毕');
 })();
+
 
 
