@@ -303,6 +303,16 @@ async function handleAccount(account) {
         }
     }
 
+    // 获取积分信息
+    try {
+        await page.goto('https://7yuki.com/', { waitUntil: 'networkidle2' });
+        await page.waitForSelector('.myitem_one', { timeout: 10000 });
+        const points = await page.$eval('.myitem_one', el => el.innerText);
+        console.log(`账户 ${account.username} ${points}`);
+    } catch (e) {
+        console.log(`账户 ${account.username} 获取积分信息失败:`, e.message);
+    }
+
     await browser.close();
     return true;
 }
@@ -335,6 +345,7 @@ async function handleAccount(account) {
     
     console.log('所有账户处理完毕');
 })();
+
 
 
 
