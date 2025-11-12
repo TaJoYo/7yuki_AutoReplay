@@ -65,6 +65,36 @@ function jitter(ms, spread = 3000) {
     return ms + d;
 }
 
+// OCR 调用锁，用于控制并发时的 API 调用间隔
+class OCRLock {
+    constructor(minInterval = 3000) {
+        this.lastCallTime = 0;
+        this.minInterval = minInterval; // 最小调用间隔（毫秒）
+        this.queue = Promise.resolve();
+    }
+    
+    async acquire() {
+        // 将任务加入队列
+        const currentTask = this.queue.then(async () => {
+            const now = Date.now();
+            const elapsed = now - this.lastCallTime;
+            
+            if (elapsed < this.minInterval) {
+                const waitTime = this.minInterval - elapsed;
+                console.log(`OCR API 调用间隔控制：等待 ${waitTime}ms`);
+                await sleep(waitTime);
+            }
+            
+            this.lastCallTime = Date.now();
+        });
+        
+        this.queue = currentTask;
+        await currentTask;
+    }
+}
+
+const ocrLock = new OCRLock(3000); // 全局 OCR 锁，3秒间隔
+
 function getAccessToken() {
     let options = {
         'method': 'POST',
@@ -82,6 +112,9 @@ function getAccessToken() {
 }
 
 async function recognizeCaptchaBaidu(imgData, isBase64 = false) {
+    // 获取 OCR 锁，确保并发时控制调用间隔
+    await ocrLock.acquire();
+    
     const token = await getAccessToken();
     const base64Img = isBase64 ? imgData : Buffer.from(imgData).toString('base64');
 
@@ -327,25 +360,40 @@ async function handleAccount(account) {
     
     console.log(`共找到 ${accounts.length} 个账户`);
     
-    // 依次处理每个账户
-    for (const [index, account] of accounts.entries()) {
-        try {
-            console.log(`开始处理第 ${index + 1} 个账户`);
-            await handleAccount(account);
-            
-            // 账户之间添加间隔，避免过于频繁
-            if (index < accounts.length - 1) {
-                console.log('等待 30 秒后处理下一个账户');
-                await sleep(30000);
+    // 是否启用并行模式（可通过环境变量控制）
+    const PARALLEL_MODE = String(process.env.PARALLEL_MODE).toLowerCase() !== 'false'; // 默认开启
+    
+    if (PARALLEL_MODE && accounts.length > 1) {
+        console.log('使用并行模式处理多个账户');
+        
+        // 并行处理所有账户
+        const tasks = accounts.map((account, index) => {
+            return handleAccount(account).catch(e => {
+                console.error(`处理账户 ${account.username} 时发生错误:`, e.message);
+                return false;
+            });
+        });
+        
+        await Promise.all(tasks);
+    } else {
+        console.log('使用串行模式处理账户');
+        
+        // 依次处理每个账户（原有逻辑）
+        for (const [index, account] of accounts.entries()) {
+            try {
+                console.log(`开始处理第 ${index + 1} 个账户`);
+                await handleAccount(account);
+                
+                // 账户之间添加间隔，避免过于频繁
+                if (index < accounts.length - 1) {
+                    console.log('等待 30 秒后处理下一个账户');
+                    await sleep(30000);
+                }
+            } catch (e) {
+                console.error(`处理账户 ${account.username} 时发生错误:`, e.message);
             }
-        } catch (e) {
-            console.error(`处理账户 ${account.username} 时发生错误:`, e.message);
         }
     }
     
     console.log('所有账户处理完毕');
 })();
-
-
-
-
